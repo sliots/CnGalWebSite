@@ -34,7 +34,8 @@ WORKDIR "/src/CnGalWebSite/CnGalWebSite.MainSite"
 # 此阶段用于发布要复制到最终阶段的服务项目
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./CnGalWebSite.MainSite.csproj" -c $BUILD_CONFIGURATION --no-restore -o /app/publish /p:UseAppHost=false
+# 不使用 --no-restore，确保 Blazor 框架脚本进入发布产物。
+RUN dotnet publish "./CnGalWebSite.MainSite.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # 此阶段在生产中使用，或在常规模式下从 VS 运行时使用(在不使用调试配置时为默认值)
 FROM base AS final
