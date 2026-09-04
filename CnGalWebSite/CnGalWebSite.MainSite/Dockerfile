@@ -1,7 +1,12 @@
 # 请参阅 https://aka.ms/customizecontainer 以了解如何自定义调试容器，以及 Visual Studio 如何使用此 Dockerfile 生成映像以更快地进行调试。
 
 # 此阶段用于在快速模式(默认为调试配置)下从 VS 运行时
-FROM littlefishtentears/dotnet-with-curl:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && mkdir -p /home/app/.aspnet/DataProtection-Keys \
+    && chown -R $APP_UID:root /home/app/.aspnet \
+    && rm -rf /var/lib/apt/lists/*
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
@@ -13,28 +18,26 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["CnGalWebSite/CnGalWebSite.MainSite/CnGalWebSite.MainSite.csproj", "CnGalWebSite/CnGalWebSite.MainSite/"]
+COPY ["CnGalWebSite/CnGalWebSite.HealthCheck/CnGalWebSite.HealthCheck.csproj", "CnGalWebSite/CnGalWebSite.HealthCheck/"]
 COPY ["CnGalWebSite/CnGalWebSite.MainSite.Shared/CnGalWebSite.MainSite.Shared.csproj", "CnGalWebSite/CnGalWebSite.MainSite.Shared/"]
-COPY ["CnGalWebSite/CnGalWebSite.Extensions/CnGalWebSite.Extensions.csproj", "CnGalWebSite/CnGalWebSite.Extensions/"]
 COPY ["CnGalWebSite/CnGalWebSite.SDK.MainSite/CnGalWebSite.SDK.MainSite.csproj", "CnGalWebSite/CnGalWebSite.SDK.MainSite/"]
+COPY ["CnGalWebSite/CnGalWebSite.SDK.MainSite.AspNet/CnGalWebSite.SDK.MainSite.AspNet.csproj", "CnGalWebSite/CnGalWebSite.SDK.MainSite.AspNet/"]
+COPY ["CnGalWebSite/CnGalWebSite.DrawingBed.Models/CnGalWebSite.DrawingBed.Models.csproj", "CnGalWebSite/CnGalWebSite.DrawingBed.Models/"]
+COPY ["CnGalWebSite/CnGalWebSite.TimedTask.Models/CnGalWebSite.TimedTask.Models.csproj", "CnGalWebSite/CnGalWebSite.TimedTask.Models/"]
+COPY ["CnGalWebSite/CnGalWebSite.Extensions/CnGalWebSite.Extensions.csproj", "CnGalWebSite/CnGalWebSite.Extensions/"]
 COPY ["CnGalWebSite/CnGalWebSite.DataModel/CnGalWebSite.DataModel.csproj", "CnGalWebSite/CnGalWebSite.DataModel/"]
 COPY ["CnGalWebSite/CnGalWebSite.Core/CnGalWebSite.Core.csproj", "CnGalWebSite/CnGalWebSite.Core/"]
 RUN dotnet restore "./CnGalWebSite/CnGalWebSite.MainSite/CnGalWebSite.MainSite.csproj"
 COPY . .
 WORKDIR "/src/CnGalWebSite/CnGalWebSite.MainSite"
-RUN dotnet build "./CnGalWebSite.MainSite.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # 此阶段用于发布要复制到最终阶段的服务项目
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./CnGalWebSite.MainSite.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./CnGalWebSite.MainSite.csproj" -c $BUILD_CONFIGURATION --no-restore -o /app/publish /p:UseAppHost=false
 
 # 此阶段在生产中使用，或在常规模式下从 VS 运行时使用(在不使用调试配置时为默认值)
 FROM base AS final
 WORKDIR /app
-# 创建 DataProtection 密钥目录并设置权限，确保非 root 用户可以写入
-USER root
-RUN mkdir -p /home/app/.aspnet/DataProtection-Keys \
-    && chown -R $APP_UID:root /home/app/.aspnet
-USER $APP_UID
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "CnGalWebSite.MainSite.dll"]
