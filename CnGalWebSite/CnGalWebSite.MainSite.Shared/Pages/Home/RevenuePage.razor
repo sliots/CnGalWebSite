@@ -16,23 +16,19 @@
         <div class="revenue-page__info">
             <ul class="revenue-page__info-list">
                 <li>
-                    榜单仅收录当年新发售，且在CnGal资料站中收录的作品
-                    <span class="revenue-page__info-sub">（P.S 因为没收录的用SQL查不出来）</span>
-                </li>
-                <li>
                     CnGal资料站收录范围是：以美少女为主要角色或以美少女为主要攻略对象的冒险、视觉小说、养成、角色扮演等类型的游戏
-                    <s>可爱的男孩子作品也可以收录</s>（汗流浃背了，兄弟）
-                    <span class="revenue-page__info-sub">由于CnGal人手有限，存在即便满足了定义但并未收录的作品</span>
+                    <span class="revenue-page__info-sub">由于人手有限，存在即便满足了定义但并未收录的作品。欢迎同好们一起参与到资料站编辑中</span>
                 </li>
-                <li>欢迎同好们一起参与到资料站编辑中</li>
                 <li>
                     销量和销售额的数据源采用
                     (<a href="https://gamalytic.com/" target="_blank" rel="noopener noreferrer">Gamalytic</a> +
-                    <a href="https://vginsights.com/" target="_blank" rel="noopener noreferrer">VG Insights</a>) / 2 +
-                    <a href="https://www.taptap.cn/" target="_blank" rel="noopener noreferrer">TapTap</a>。所以肯定不准，图一乐就好。
+                    <a href="https://vginsights.com/" target="_blank" rel="noopener noreferrer">VG Insights</a>)
+                    的均值。<strong>均为第三方估算，并非官方数据。</strong>统一采用同一套口径，主要是为了方便不同作品之间进行比较。
+                    估算难免存在误差，更适合看个大概、相对表现和市场趋势，具体数字图一乐就好。
                 </li>
                 <li>
-                    值得注意的是，销售额并不代表开发者实际所能获得的收入，Steam等平台会收取一定比例的分成（30%）。在这个分成基础上，发行商会再收取一定比例的分成。剩余的部分才是开发者实际所能获得的收入（用于支付给外包或是项目人员工资或是分成）。国G回本不易，开坑需谨慎。
+                    值得注意的是，销售额并不等于开发者实际收入。Steam平台、发行商会收取一定比例的分成。
+                    Steam平台、发行商等通常都会收取一定比例的分成， 剩余部分还需要用于支付外包、项目人员工资或分成等成本回本不易，开坑需谨慎。
                 </li>
             </ul>
         </div>
@@ -46,12 +42,12 @@
                 <button class="revenue-page__toggle @(Order == 0 ? "revenue-page__toggle--active" : "")"
                         @onclick="() => OnOrderChanged(0)">
                     <CgMdiIcon Name="mdiCurrencyCny" aria-hidden="true" />
-                    <span>销售额</span>
+                    <span>预估销售额</span>
                 </button>
                 <button class="revenue-page__toggle @(Order == 1 ? "revenue-page__toggle--active" : "")"
                         @onclick="() => OnOrderChanged(1)">
                     <CgMdiIcon Name="mdiAccountGroupOutline" aria-hidden="true" />
-                    <span>销量</span>
+                    <span>预估销量</span>
                 </button>
             </div>
         </div>
