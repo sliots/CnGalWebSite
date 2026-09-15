@@ -6,6 +6,7 @@ using CnGalWebSite.Kanban.ChatGPT.Extensions;
 using NLog;
 using NLog.Extensions.Logging;
 using Microsoft.Extensions.Logging;
+using CnGalWebSite.Kanban.ChatGPT.Configuration;
 
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
@@ -26,6 +27,9 @@ builder.Services.AddEventBus();
 
 // 添加用户机密
 builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly(), true);
+
+// 添加强类型配置
+builder.Services.AddKanbanChatGptConfiguration();
 
 // 添加内存缓存
 builder.Services.AddMemoryCache();

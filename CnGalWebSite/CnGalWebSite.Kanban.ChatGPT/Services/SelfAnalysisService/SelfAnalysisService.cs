@@ -1,10 +1,11 @@
 ﻿using CnGalWebSite.Core.Services;
+using CnGalWebSite.Kanban.ChatGPT.Configuration;
 using CnGalWebSite.Kanban.ChatGPT.Models.GPT;
 using CnGalWebSite.Kanban.ChatGPT.Models.SelfAnalysis;
 using CnGalWebSite.Kanban.ChatGPT.Models.UserProfile;
 using CnGalWebSite.Kanban.ChatGPT.Services.UserProfileService;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.SelfAnalysisService
     public class SelfAnalysisService : ISelfAnalysisService
     {
         private readonly ILogger<SelfAnalysisService> _logger;
-        private readonly IConfiguration _configuration;
+        private readonly ChatGptOptions _chatGptOptions;
         private readonly HttpClient _httpClient;
         private readonly ISelfMemoryService _selfMemoryService;
 
@@ -30,11 +31,11 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.SelfAnalysisService
             PropertyNameCaseInsensitive = true,
         };
 
-        public SelfAnalysisService(ILogger<SelfAnalysisService> logger, IConfiguration configuration,
+        public SelfAnalysisService(ILogger<SelfAnalysisService> logger, IOptions<ChatGptOptions> chatGptOptions,
             IHttpService httpService, ISelfMemoryService selfMemoryService)
         {
             _logger = logger;
-            _configuration = configuration;
+            _chatGptOptions = chatGptOptions.Value;
             _selfMemoryService = selfMemoryService;
 
             _httpClient = httpService.GetClientAsync().GetAwaiter().GetResult();
@@ -159,13 +160,12 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.SelfAnalysisService
 
                 var fusionRequest = new ChatCompletionModel
                 {
-                    Model = string.IsNullOrWhiteSpace(_configuration["ChatGPTModel"]) ? "deepseek-v4-flash" : _configuration["ChatGPTModel"]!,
+                    Model = _chatGptOptions.Model,
                     Messages = fusionMessages,
                     temperature = 0.1
                 };
 
-                var url = _configuration["ChatGPTApiUrl"];
-                var fusionResponse = await _httpClient.PostAsJsonAsync(url!.TrimEnd('/') + "/v1/chat/completions", fusionRequest);
+                var fusionResponse = await _httpClient.PostAsJsonAsync(_chatGptOptions.BaseAddress.TrimEnd('/') + "/v1/chat/completions", fusionRequest);
 
                 if (!fusionResponse.IsSuccessStatusCode)
                 {

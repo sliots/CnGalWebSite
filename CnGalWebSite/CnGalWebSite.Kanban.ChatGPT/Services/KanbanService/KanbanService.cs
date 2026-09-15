@@ -1,12 +1,13 @@
 ﻿using CnGalWebSite.Core.Services;
 using CnGalWebSite.EventBus.Models;
+using CnGalWebSite.Kanban.ChatGPT.Configuration;
 using CnGalWebSite.Kanban.ChatGPT.Extensions;
 using CnGalWebSite.Kanban.ChatGPT.Models.GPT;
 using CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService;
 using CnGalWebSite.Kanban.ChatGPT.Services.UserProfileService;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,13 +17,13 @@ using System.Threading.Tasks;
 
 namespace CnGalWebSite.Kanban.ChatGPT.Services.KanbanService
 {
-    public class KanbanService(IMemoryCache memoryCache, ILogger<KanbanService> logger, IConfiguration configuration, IChatGPTService chatGPTService, IUserProfileService userProfileService) : IKanbanService
+    public class KanbanService(IMemoryCache memoryCache, ILogger<KanbanService> logger, IOptions<ChatGptOptions> chatGptOptions, IChatGPTService chatGPTService, IUserProfileService userProfileService) : IKanbanService
     {
 
         private readonly IMemoryCache _memoryCache = memoryCache;
         private readonly IChatGPTService _chatGPTService = chatGPTService;
         private readonly ILogger<KanbanService> _logger = logger;
-        private readonly IConfiguration _configuration = configuration;
+        private readonly ChatGptOptions _chatGptOptions = chatGptOptions.Value;
         private readonly IUserProfileService _userProfileService = userProfileService;
 
 
@@ -71,7 +72,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.KanbanService
             }
 
             // 检查消息长度
-            if (message != null && message.Length > int.Parse(_configuration["ChatGPTLimit_Length"] ?? "30"))
+            if (message != null && message.Length > _chatGptOptions.MaxMessageLength)
             {
                 return new ChatGPTSendMessageResult
                 {
@@ -122,7 +123,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.KanbanService
                     // 是则拼接开场白
                     messageList.Clear();
 
-                    var sys = _configuration["ChatGPT_SystemMessageTemplate"];
+                    var sys = _chatGptOptions.SystemMessageTemplate;
 
                     if (string.IsNullOrWhiteSpace(sys))
                     {
@@ -202,7 +203,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.KanbanService
             var datetime = DateTime.Now.ToCstTime();
 
             // 拼接开场白
-            var sys = _configuration["ChatGPT_SystemMessageTemplate"];
+            var sys = _chatGptOptions.SystemMessageTemplate;
 
             if (string.IsNullOrWhiteSpace(sys))
             {
@@ -218,8 +219,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.KanbanService
             sys = sys.Replace("{date}", datetime.ToString("yyyy年MM月dd日"));
 
             // 对于群聊，获取最后一个发言的用户ID来生成个性化系统消息
-            var enablePersonalizedSystem = _configuration["DisablePersonalizedSystem"];
-            if (enablePersonalizedSystem?.ToLower() != "true")
+            if (!_chatGptOptions.DisablePersonalizedSystem)
             {
                 var lastUserMessage = messages.LastOrDefault(m => !m.IsAssistant);
                 var userIdForPersonalization = lastUserMessage?.Id.ToString() ?? "global";
@@ -234,8 +234,8 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.KanbanService
             });
 
             // 拼接示例问答
-            var user = _configuration["ChatGPT_Sample_User"];
-            var kanban = _configuration["ChatGPT_Sample_Kanban"];
+            var user = _chatGptOptions.SampleUser;
+            var kanban = _chatGptOptions.SampleKanban;
             if (string.IsNullOrWhiteSpace(user) == false && string.IsNullOrWhiteSpace(kanban) == false)
             {
                 messageList.Add(new ChatCompletionMessage

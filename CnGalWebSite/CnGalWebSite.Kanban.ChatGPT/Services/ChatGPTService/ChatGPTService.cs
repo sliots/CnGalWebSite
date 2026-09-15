@@ -1,13 +1,14 @@
 ﻿using CnGalWebSite.Core.Services;
 using CnGalWebSite.Extensions;
+using CnGalWebSite.Kanban.ChatGPT.Configuration;
 using CnGalWebSite.Kanban.ChatGPT.Models.GPT;
 using CnGalWebSite.Kanban.ChatGPT.Services.SensitiveWords;
 using CnGalWebSite.Kanban.ChatGPT.Services.UserProfileService;
 using CnGalWebSite.Kanban.ChatGPT.Services.UserAnalysisService;
 using CnGalWebSite.Kanban.ChatGPT.Services.SelfAnalysisService;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
     public class ChatGPTService : IChatGPTService
     {
         private readonly IHttpService _httpService;
-        private readonly IConfiguration _configuration;
+        private readonly ChatGptOptions _chatGptOptions;
         private readonly ILogger<ChatGPTService> _logger;
         private readonly IMemoryCache _memoryCache;
         private readonly ISensitiveWordService _sensitiveWordService;
@@ -32,18 +33,17 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
 
         private static List<DateTime> _record = new List<DateTime>();
         private readonly HttpClient _httpClient;
-        private readonly int MaxRecursionDepth;
 
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
         };
 
-        public ChatGPTService(IHttpService httpService, IConfiguration configuration, ILogger<ChatGPTService> logger,
+        public ChatGPTService(IHttpService httpService, IOptions<ChatGptOptions> chatGptOptions, ILogger<ChatGPTService> logger,
             IMemoryCache memoryCache, ISensitiveWordService sensitiveWordService, IFunctionCallingService functionCallingService, ISelfAnalysisService selfAnalysisService, IUserAnalysisService userAnalysisService)
         {
             _httpService = httpService;
-            _configuration = configuration;
+            _chatGptOptions = chatGptOptions.Value;
             _logger = logger;
             _memoryCache = memoryCache;
             _sensitiveWordService = sensitiveWordService;
@@ -52,10 +52,6 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
             _userAnalysisService = userAnalysisService;
 
             _httpClient = _httpService.GetClientAsync().GetAwaiter().GetResult();
-            if (!int.TryParse(_configuration["MaxRecursionDepth"], out MaxRecursionDepth))
-            {
-                MaxRecursionDepth = 10;
-            }
         }
 
         private async Task<double> CheckBalance()
@@ -125,12 +121,12 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
         {
             var datetime = DateTime.Now;
             //检查上限
-            if (_record.Count(s => s > datetime.AddMinutes(-1)) > int.Parse(_configuration["ChatGPTLimit_1_Minute"] ?? "10"))
+            if (_record.Count(s => s > datetime.AddMinutes(-1)) > _chatGptOptions.GlobalRequestsPerMinute)
             {
                 return false;
             }
             //检查上限
-            if (_record.Count(s => s > datetime.AddDays(-1)) > int.Parse(_configuration["ChatGPTLimit_1_Day"] ?? "1000"))
+            if (_record.Count(s => s > datetime.AddDays(-1)) > _chatGptOptions.GlobalRequestsPerDay)
             {
                 return false;
             }
@@ -162,9 +158,9 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
         private async Task<ChatGPTSendMessageResult> SendMessages(List<ChatCompletionMessage> messages, int _recursionCount, string? _lastToolCallHash)
         {
             // 检查递归深度
-            if (_recursionCount >= MaxRecursionDepth)
+            if (_recursionCount >= _chatGptOptions.MaxRecursionDepth)
             {
-                _logger.LogWarning("检测到可能的无限递归，已达到最大递归深度 {depth}", MaxRecursionDepth);
+                _logger.LogWarning("检测到可能的无限递归，已达到最大递归深度 {depth}", _chatGptOptions.MaxRecursionDepth);
 
                 _recursionCount = 0;
 
@@ -211,7 +207,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
             string? reply = null;
 
             // 检查余额（仅 DeepSeek 官方 API 时）
-            var apiUrl = _configuration["ChatGPTApiUrl"] ?? "";
+            var apiUrl = _chatGptOptions.BaseAddress;
             if (apiUrl.Contains("api.deepseek.com"))
             {
                 try
@@ -254,17 +250,17 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
                 _record.Add(DateTime.Now);
 
                 // api
-                var url = _configuration["ChatGPTApiUrl"];
+                var url = _chatGptOptions.BaseAddress;
 
                 var model = new ChatCompletionModel
                 {
-                    Model = string.IsNullOrWhiteSpace(_configuration["ChatGPTModel"]) ? "deepseek-flash" : _configuration["ChatGPTModel"]!,
+                    Model = _chatGptOptions.Model,
                     Messages = messages,
                     reasoning_effort = "none"
                 };
 
 
-                if (_configuration["EnableFunctionCalling"]?.ToLower() == "true")
+                if (_chatGptOptions.EnableFunctionCalling)
                 {
                     // 添加可用的工具
                     var tools = _functionCallingService.GetAvailableTools();
@@ -392,8 +388,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
                         Message = "回复为空"
                     };
                 }
-                var enablePersonalizedSystem = _configuration["DisablePersonalizedSystem"];
-                if (enablePersonalizedSystem?.ToLower() != "true")
+                if (!_chatGptOptions.DisablePersonalizedSystem)
                 {
                     // 【优化后】使用智能融合分析，减少数据冗余
                     _ = Task.Run(async () => await _selfAnalysisService.AnalyzeAndFuseSelfInfoAsync(reply));

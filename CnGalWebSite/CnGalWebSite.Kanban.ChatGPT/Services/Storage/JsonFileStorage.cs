@@ -1,5 +1,6 @@
-using Microsoft.Extensions.Configuration;
+using CnGalWebSite.Kanban.ChatGPT.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -31,10 +32,10 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.Storage
             public string FilePath { get; set; } = "";
         }
 
-        public JsonFileStorage(IConfiguration configuration, ILogger<JsonFileStorage> logger)
+        public JsonFileStorage(IOptions<PersistentStorageOptions> persistentStorageOptions, ILogger<JsonFileStorage> logger)
         {
             _logger = logger;
-            _storageDirectory = configuration["PersistentStorage:Directory"] ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage");
+            _storageDirectory = persistentStorageOptions.Value.Directory;
 
             // 确保存储目录存在
             Directory.CreateDirectory(_storageDirectory);

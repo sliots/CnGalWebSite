@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CnGalWebSite.EventBus.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace CnGalWebSite.Kanban.ChatGPT.Services.SensitiveWords

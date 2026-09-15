@@ -1,6 +1,5 @@
 ﻿using CnGalWebSite.Kanban.ChatGPT.Models.UserProfile;
 using CnGalWebSite.Kanban.ChatGPT.Services.Storage;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -17,7 +16,6 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.UserProfileService
     {
         private readonly IPersistentStorage _persistentStorage;
         private readonly ILogger<UserProfileService> _logger;
-        private readonly IConfiguration _configuration;
         private readonly ISelfMemoryService _selfMemoryService;
 
         // 缓存前缀
@@ -30,11 +28,10 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.UserProfileService
         };
 
         public UserProfileService(IPersistentStorage persistentStorage,
-            ILogger<UserProfileService> logger, IConfiguration configuration, ISelfMemoryService selfMemoryService)
+            ILogger<UserProfileService> logger, ISelfMemoryService selfMemoryService)
         {
             _persistentStorage = persistentStorage;
             _logger = logger;
-            _configuration = configuration;
             _selfMemoryService = selfMemoryService;
         }
 
