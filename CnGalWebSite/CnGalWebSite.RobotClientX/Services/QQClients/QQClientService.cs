@@ -15,6 +15,8 @@ using UnifyBot.Receiver;
 using UnifyBot.Utils;
 using UnifyBot.Message.Chain;
 using UnifyBot.Message;
+using CnGalWebSite.RobotClientX.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CnGalWebSite.RobotClientX.Services.QQClients
 {
@@ -23,7 +25,9 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
         private readonly IRepository<RobotGroup> _robotGroupRepository;
         private readonly IRepository<RobotEvent> _robotEventRepository;
         private readonly IRepository<PostLog> _postLogRepository;
-        private readonly IConfiguration _configuration;
+        private readonly RobotOptions _robotOptions;
+        private readonly OneBotOptions _oneBotOptions;
+        private readonly ReplyLimitsOptions _replyLimitsOptions;
         private readonly IMessageService _messageService;
         private readonly IEventService _eventService;
         private readonly IEventBusService _eventBusService;
@@ -39,11 +43,15 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
         System.Timers.Timer t2 = new(1000 * 60);
 
         public QQClientService(IRepository<RobotGroup> robotGroupRepository, IRepository<PostLog> postLogRepository,
-            IConfiguration configuration, ILogger<QQClientService> logger, IEventService eventService, IEventBusService eventBusService,
+            IOptions<RobotOptions> robotOptions, IOptions<OneBotOptions> oneBotOptions,
+            IOptions<ReplyLimitsOptions> replyLimitsOptions, ILogger<QQClientService> logger,
+            IEventService eventService, IEventBusService eventBusService,
         IMessageService messageService, IRepository<RobotEvent> robotEventRepository, IGroupMessageCacheService groupMessageCacheService, IQQGroupMemberCacheService memberCacheService)
         {
             _robotGroupRepository = robotGroupRepository;
-            _configuration = configuration;
+            _robotOptions = robotOptions.Value;
+            _oneBotOptions = oneBotOptions.Value;
+            _replyLimitsOptions = replyLimitsOptions.Value;
             _messageService = messageService;
             _postLogRepository = postLogRepository;
             _logger = logger;
@@ -75,7 +83,8 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
 
         public async Task InitUnifyBot()
         {
-            Connect connect = new(_configuration["OneBotHost"], int.Parse(_configuration["OneBotWsPort"]), int.Parse(_configuration["OneBotHttpPort"]), _configuration["OneBotToken"]);//token可选参数
+            Connect connect = new(_oneBotOptions.Host, _oneBotOptions.WebSocketPort,
+                _oneBotOptions.HttpPort, _oneBotOptions.Token);//token可选参数
             _unifyBot = new(connect);
             await _unifyBot.StartAsync();
 
@@ -236,24 +245,20 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
             }
 
             // 获取QQ
-            var kanban = _configuration["QQ"];
-            if (!long.TryParse(kanban, out long qq))
-            {
-                qq = 0;
-            }
+            var qq = _robotOptions.QQ;
 
             // 添加消息到缓存
             _groupMessageCacheService.AddMessage(model.GroupQQ, new GroupMessageRecord
             {
                 SenderId = model.SenderQQ,
                 SenderName = model.Sender.Nickname,
-                Content = message.ReplaceAtTags(model.GroupQQ, _memberCacheService, qq, _configuration["RobotName"]),// 替换掉@再保存
+                Content = message.ReplaceAtTags(model.GroupQQ, _memberCacheService, qq, _robotOptions.Name),// 替换掉@再保存
                 SendTime = DateTime.Now
             });
 
             if (group.ForceMatch)
             {
-                string name = _configuration["RobotName"] ?? "看板娘";
+                string name = _robotOptions.Name;
                 if ((name != null && message.Contains(name) == false) || message.Contains("介绍") == false)
                 {
                     return;
@@ -301,10 +306,10 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
             }
             catch (ArgError ae)
             {
-                if (long.TryParse(_configuration["WarningQQGroup"], out long warningQQGroup))
+                if (_robotOptions.WarningGroup > 0)
                 {
                     //发送警告
-                    await SendMessage(RobotReplyRange.Group, warningQQGroup, ae.Error);
+                    await SendMessage(RobotReplyRange.Group, _robotOptions.WarningGroup, ae.Error);
                 }
             }
 
@@ -349,18 +354,8 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
             int singleCount = _postLogRepository.GetAll().Count(x => (DateTime.Now.ToCstTime() - x.PostTime).TotalMinutes <= 1 && x.QQ == memberId);
             int totalCount = _postLogRepository.GetAll().Count(x => (DateTime.Now.ToCstTime() - x.PostTime).TotalMinutes <= 1);
 
-            //读取上限次数配置
-            if (!long.TryParse(_configuration["SingleLimit"], out long singleLimit))
-            {
-                singleLimit = 5;
-            }
-            if (!long.TryParse(_configuration["TotalLimit"], out long totalLimit))
-            {
-                totalLimit = 10;
-            }
-
             //检查上限
-            if (singleCount == singleLimit)
+            if (singleCount == _replyLimitsOptions.SinglePerMinute)
             {
                 SendMessageModel result = await _messageService.ProcMessageAsync(range, _robotEventRepository.GetAll().FirstOrDefault(s => s.Note == "消息上限警告")?.Text ?? $"[image=https://image.cngal.org/kanbanFace/hhzywx.png][@{memberId}]如果恶意骚扰人家的话，我会请你离开哦…", null, null, memberId, memberName, sendto);
                 result.SendTo = sendto;
@@ -368,7 +363,7 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
                 return true;
             }
 
-            if (totalCount == totalLimit)
+            if (totalCount == _replyLimitsOptions.TotalPerMinute)
             {
                 SendMessageModel result = await _messageService.ProcMessageAsync(range, $"核心温度过高，正在冷却......", null, null, memberId, memberName, sendto);
                 result.SendTo = sendto;
@@ -376,12 +371,12 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
                 return true;
             }
 
-            if (singleCount > singleLimit)
+            if (singleCount > _replyLimitsOptions.SinglePerMinute)
             {
                 return true;
             }
 
-            if (totalCount > totalLimit)
+            if (totalCount > _replyLimitsOptions.TotalPerMinute)
             {
                 return true;
             }
@@ -424,16 +419,10 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
                 _logger.LogInformation("向 {group} 发送\"{text}\"成功", model.SendTo, model.Text);
 
                 // 添加消息到历史记录
-                var kanban = _configuration["QQ"];
-                if (!long.TryParse(kanban, out long qq))
-                {
-                    return;
-                }
-
                 _groupMessageCacheService.AddMessage(model.SendTo, new GroupMessageRecord
                 {
-                    SenderId = qq,
-                    SenderName = _configuration["RobotName"],
+                    SenderId = _robotOptions.QQ,
+                    SenderName = _robotOptions.Name,
                     Content = $"【看板娘】\n{model.Text}",
                     SendTime = DateTime.Now
                 });

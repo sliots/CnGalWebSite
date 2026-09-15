@@ -1,6 +1,5 @@
 ﻿
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
 namespace CnGalWebSite.RobotClientX.DataRepositories
@@ -18,12 +17,10 @@ namespace CnGalWebSite.RobotClientX.DataRepositories
         private readonly string _index = typeof(TEntity).ToString().Split('.').Last().ToLower();
      
         //依赖注入服务
-        private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public Repository(IConfiguration configuration, IWebHostEnvironment webHostEnvironment)
+        public Repository(IWebHostEnvironment webHostEnvironment)
         {
-            _configuration = configuration;
             _webHostEnvironment = webHostEnvironment;
 
             Load();

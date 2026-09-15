@@ -1,4 +1,3 @@
-﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 using CnGalWebSite.RobotClientX.DataRepositories;
@@ -17,6 +16,8 @@ using Result = CnGalWebSite.RobotClientX.Models.Messages.Result;
 using CnGalWebSite.RobotClientX.Services.GPT;
 using UnifyBot.Message.Chain;
 using UnifyBot.Message;
+using CnGalWebSite.RobotClientX.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CnGalWebSite.RobotClientX.Services.Messages
 {
@@ -25,7 +26,7 @@ namespace CnGalWebSite.RobotClientX.Services.Messages
         private readonly IRepository<RobotReply> _robotReplyRepository;
         private readonly IRepository<RobotFace> _robotFaceRepository;
         private readonly ISensitiveWordService _sensitiveWordService;
-        private readonly IConfiguration _configuration;
+        private readonly RobotOptions _robotOptions;
         private readonly ILogger<MessageService> _logger;
         private readonly IExternalDataService _externalDataService;
         private readonly IHttpService _httpService;
@@ -34,13 +35,13 @@ namespace CnGalWebSite.RobotClientX.Services.Messages
 
         public MessageService(IRepository<RobotReply> robotReplyRepository, IRepository<RobotFace> robotFaceRepository, IExternalDataService externalDataService, IHttpService httpService, IChatGPTService chatGPTService,
         ILogger<MessageService> logger,
-        IConfiguration configuration,
+        IOptions<RobotOptions> robotOptions,
             ISensitiveWordService sensitiveWordService, IQQGroupMemberCacheService memberCacheService)
         {
             _robotReplyRepository = robotReplyRepository;
             _sensitiveWordService = sensitiveWordService;
             _logger = logger;
-            _configuration = configuration;
+            _robotOptions = robotOptions.Value;
             _robotFaceRepository = robotFaceRepository;
             _externalDataService = externalDataService;
             _httpService = httpService;
@@ -81,7 +82,9 @@ namespace CnGalWebSite.RobotClientX.Services.Messages
                     return new RobotReply
                     {
                         Key = message,
-                        Value = _configuration["SensitiveReply"] ?? $"{_configuration["RobotName"]}不知道哦~"
+                        Value = string.IsNullOrWhiteSpace(_robotOptions.SensitiveReply)
+                            ? $"{_robotOptions.Name}不知道哦~"
+                            : _robotOptions.SensitiveReply
                     };
                 }
             }

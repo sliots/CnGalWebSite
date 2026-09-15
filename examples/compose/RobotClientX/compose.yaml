@@ -20,39 +20,44 @@ services:
         required: false
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      # 账号
-      QQ: ${QQ}
-      # 称呼
-      RobotName: ${RobotName:-看板娘}
-      # 接收预警的QQ群
-      WarningQQGroup: ${WarningQQGroup}
-      # OneBot Host（只支持IP）
-      OneBotHost: ${OneBotHost}
+
+      # 机器人
+      Robot__QQ: ${Robot__QQ:-0}
+      Robot__Name: ${Robot__Name:-看板娘}
+      Robot__WarningGroup: ${Robot__WarningGroup:-0}
+      Robot__SensitiveReply: ${Robot__SensitiveReply:-}
+
+      # OneBot Host（支持 IP 或主机名）
+      OneBot__Host: ${OneBot__Host:-}
       # OneBot Websocket端口（必填）
-      OneBotWsPort: ${OneBotWsPort}
+      OneBot__WebSocketPort: ${OneBot__WebSocketPort:-0}
       # OneBot Http端口（必填）
-      OneBotHttpPort: ${OneBotHttpPort}
+      OneBot__HttpPort: ${OneBot__HttpPort:-0}
       # OneBot Token
-      OneBotToken: ${OneBotToken}
+      OneBot__Token: ${OneBot__Token:-}
+
       # CnGal资料站 API
-      WebApiPath: ${WebApiPath:-https://api.cngal.org/}
+      CnGalApi__BaseAddress: ${CnGalApi__BaseAddress:-https://api.cngal.org/}
+
+      # 管理站点
       # 网站名称
-      WebSiteName: ${WebSiteName:-看板娘在这里哦}
+      WebSite__Name: ${WebSite__Name:-看板娘在这里哦}
       # 网站背景图
-      WebSiteImage: ${WebSiteImage:-https://res.cngal.org/_content/CnGalWebSite.Shared/images/game_head.png}
-      # 网站主题颜色
-      WebSiteTheme: "${WebSiteTheme:-#f06292}"
+      WebSite__BackgroundImageUrl: ${WebSite__BackgroundImageUrl:-https://res.cngal.org/_content/CnGalWebSite.Shared/images/game_head.png}
+
+      # 回复限制
+      ReplyLimits__SinglePerMinute: ${ReplyLimits__SinglePerMinute:-5}
+      ReplyLimits__TotalPerMinute: ${ReplyLimits__TotalPerMinute:-10}
+
+      # 群聊历史记录
+      GroupHistory__MaximumMessages: ${GroupHistory__MaximumMessages:-30}
+      GroupHistory__RetainedMessages: ${GroupHistory__RetainedMessages:-10}
+
       # 事件总线
       RabbitMq__HostName: ${RabbitMq__HostName:-}
       RabbitMq__Port: ${RabbitMq__Port:-5672}
       RabbitMq__UserName: ${RabbitMq__UserName:-}
       RabbitMq__Password: ${RabbitMq__Password:-}
-      # 群聊历史记录最大条数
-      GroupHistoryMax: ${GroupHistoryMax:-30}
-      # 群聊历史记录达到最大条数后，保留最近N条消息
-      GroupHistoryMin: ${GroupHistoryMin:-10}
-      # 禁用个性化系统
-      DisablePersonalizedSystem: ${DisablePersonalizedSystem:-false}
 
     labels:
       com.centurylinklabs.watchtower.enable: ${WATCHTOWER_ENABLE:-true}
