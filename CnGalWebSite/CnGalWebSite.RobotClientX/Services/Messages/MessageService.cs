@@ -290,7 +290,7 @@ namespace CnGalWebSite.RobotClientX.Services.Messages
                 {
                     "time" => DateTime.Now.ToCstTime().ToString("HH:mm"),
                     "qq" => qq.ToString(),
-                    "weather" => await _chatGPTService.GetReply(sendto),//await _externalDataService.GetWeather(),
+                    "weather" => await _chatGPTService.GetReply(sendto),
                     "sender" => name,
                     "n" => "\n",
                     "r" => "\r",

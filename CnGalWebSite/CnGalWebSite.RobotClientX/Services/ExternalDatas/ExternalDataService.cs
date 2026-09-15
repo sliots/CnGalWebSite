@@ -1,5 +1,4 @@
 ﻿using CnGalWebSite.Core.Services;
-using CnGalWebSite.RobotClientX.Models.ExternalDatas;
 using CnGalWebSite.RobotClientX.Models.Messages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -24,18 +23,6 @@ namespace CnGalWebSite.RobotClientX.Services.ExternalDatas
             _configuration = configuration;
             _logger = logger;
 
-        }
-
-        public async Task< string> GetWeather()
-        {
-            var model = await _httpService.GetAsync<WeatherModel>(_configuration["WeatherUrl"]);
-
-            if(model.Success!="1"||model.Result==null)
-            {
-                return null;
-            }
-
-            return $"{(model.Result.Temp_high != model.Result.Temp_low ? $"今日温度：{model.Result.Temperature}\n" : "")}当前温度：{model.Result.Temperature_curr}\n湿度：{model.Result.Humidity}\n{model.Result.Weather_curr}\n{model.Result.Wind}{model.Result.Winp}";
         }
 
         public async Task<string> GetArgValue(string name, string infor, long qq, Dictionary<string, string> adds)
