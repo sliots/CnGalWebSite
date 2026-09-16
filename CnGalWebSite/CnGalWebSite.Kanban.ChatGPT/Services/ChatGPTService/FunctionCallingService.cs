@@ -5,12 +5,13 @@ using CnGalWebSite.DataModel.Model;
 using CnGalWebSite.DataModel.ViewModel;
 using CnGalWebSite.DataModel.ViewModel.Articles;
 using CnGalWebSite.DataModel.ViewModel.Home;
+using CnGalWebSite.Kanban.ChatGPT.Configuration;
 using CnGalWebSite.Kanban.ChatGPT.Models.Functions;
 using CnGalWebSite.Kanban.ChatGPT.Models.GPT;
 using CnGalWebSite.Kanban.ChatGPT.Models.UserProfile;
 using CnGalWebSite.Kanban.ChatGPT.Services.UserProfileService;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualBasic;
 using System;
 using System.Text.Json;
@@ -27,7 +28,6 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
     {
         private readonly Dictionary<string, Func<string, Task<string>>> _functionMap;
         private ILogger<FunctionCallingService> _logger;
-        private readonly IConfiguration _configuration;
         private readonly IHttpService _httpService;
         private readonly IUserProfileService _userProfileService;
         private readonly ISelfMemoryService _selfMemoryService;
@@ -92,11 +92,10 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
 
         private readonly string _apiUrl;
 
-        public FunctionCallingService(ILogger<FunctionCallingService> logger, IConfiguration configuration, IHttpService httpService,
+        public FunctionCallingService(ILogger<FunctionCallingService> logger, IOptions<CnGalApiOptions> cnGalApiOptions, IHttpService httpService,
             IUserProfileService userProfileService, ISelfMemoryService selfMemoryService)
         {
             _logger = logger;
-            _configuration = configuration;
             _httpService = httpService;
             _userProfileService = userProfileService;
             _selfMemoryService = selfMemoryService;
@@ -112,7 +111,7 @@ namespace CnGalWebSite.Kanban.ChatGPT.Services.ChatGPTService
                 { "get_entry", GetEntry },
                 { "get_article", GetArticle },
             };
-            _apiUrl = _configuration["WebApiPath"] ?? "https://api.cngal.org/";
+            _apiUrl = cnGalApiOptions.Value.BaseAddress;
         }
 
         public List<ChatCompletionTool> GetAvailableTools()

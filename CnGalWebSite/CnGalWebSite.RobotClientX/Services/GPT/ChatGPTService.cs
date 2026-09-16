@@ -1,24 +1,28 @@
-﻿using CnGalWebSite.Core.Services;
 using CnGalWebSite.EventBus.Models;
 using CnGalWebSite.EventBus.Services;
+using CnGalWebSite.RobotClientX.Configuration;
 using CnGalWebSite.RobotClientX.Models.GPT;
 using CnGalWebSite.RobotClientX.Models.Messages;
-using CnGalWebSite.RobotClientX.Services.ExternalDatas;
 using CnGalWebSite.RobotClientX.Services.Messages;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace CnGalWebSite.RobotClientX.Services.GPT
 {
     public class ChatGPTService : IChatGPTService
     {
-        private readonly IConfiguration _configuration;
+        private readonly RobotOptions _robotOptions;
+        private readonly GroupHistoryOptions _groupHistoryOptions;
         private readonly ILogger<ChatGPTService> _logger;
         private readonly IGroupMessageCacheService _groupMessageCacheService;
         private readonly IEventBusService _eventBusService;
 
-        public ChatGPTService(IHttpService httpService, IConfiguration configuration, ILogger<ChatGPTService> logger, IGroupMessageCacheService groupMessageCacheService, IEventBusService eventBusService)
+        public ChatGPTService(IOptions<RobotOptions> robotOptions,
+            IOptions<GroupHistoryOptions> groupHistoryOptions, ILogger<ChatGPTService> logger,
+            IGroupMessageCacheService groupMessageCacheService, IEventBusService eventBusService)
         {
-            _configuration = configuration;
+            _robotOptions = robotOptions.Value;
+            _groupHistoryOptions = groupHistoryOptions.Value;
             _logger = logger;
             _groupMessageCacheService = groupMessageCacheService;
             _eventBusService = eventBusService;
@@ -26,12 +30,7 @@ namespace CnGalWebSite.RobotClientX.Services.GPT
 
         public async Task<string> GetReply(long sendTo)
         {
-            var kanban = _configuration["QQ"];
-            if (!long.TryParse(kanban, out long qq))
-            {
-                _logger.LogError("看板娘QQ不正确：{id}", kanban);
-                return null;
-            }
+            var qq = _robotOptions.QQ;
             var messages = _groupMessageCacheService.GetGroupMessages(sendTo);
 
             if (messages.Count == 0)
@@ -41,20 +40,9 @@ namespace CnGalWebSite.RobotClientX.Services.GPT
             }
 
             // 判断是否需要清理历史消息
-            var GroupHistoryMax = _configuration["GroupHistoryMax"];
-            if (!int.TryParse(GroupHistoryMax, out int max))
+            if (_groupMessageCacheService.GetGroupMessages(sendTo).Count > _groupHistoryOptions.MaximumMessages)
             {
-                max = 30;
-            }
-            var GroupHistoryMin = _configuration["GroupHistoryMin"];
-            if (!int.TryParse(GroupHistoryMin, out int min))
-            {
-                min = 10;
-            }
-
-            if (_groupMessageCacheService.GetGroupMessages(sendTo).Count > max)
-            {
-                _groupMessageCacheService.KeepLatestMessages(sendTo, min);
+                _groupMessageCacheService.KeepLatestMessages(sendTo, _groupHistoryOptions.RetainedMessages);
             }
 
             // 拼接历史消息

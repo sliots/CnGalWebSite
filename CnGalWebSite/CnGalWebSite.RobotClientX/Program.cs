@@ -15,11 +15,9 @@ using CnGalWebSite.EventBus.Extensions;
 using CnGalWebSite.EventBus.Services;
 using CnGalWebSite.RobotClientX.Services.Messages;
 using Microsoft.OpenApi;
+using CnGalWebSite.RobotClientX.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
-//自动重置配置
-builder.Configuration.AddJsonFile("appsettings.json", true, reloadOnChange: true);
-builder.Configuration.AddJsonFile(Path.Combine(builder.Environment.WebRootPath,"Data","Setting.json"), true, reloadOnChange: true);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -58,6 +56,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 //添加后台定时任务
 builder.Services.AddHostedService<BackgroundTaskService>();
+//事件总线与配置
+builder.Services.AddEventBus();
+builder.Services.AddRobotClientConfiguration();
 //添加仓储
 builder.Services.AddSingleton(typeof(IRepository<>), typeof(Repository<>));
 //自动依赖注入
@@ -96,8 +97,6 @@ builder.Services.AddSwaggerGen(c =>
 });
 //添加控制器
 builder.Services.AddControllers();
-//事件总线
-builder.Services.AddEventBus();
 
 var app = builder.Build();
 

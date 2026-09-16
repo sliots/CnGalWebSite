@@ -1,9 +1,9 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
-@inject IConfiguration _configuration
+@inject IOptions<WebSiteOptions> WebSiteOptionsAccessor
 
 <PageTitle>
-    @_configuration["WebSiteName"]
+    @WebSiteOptionsAccessor.Value.Name
 </PageTitle>
 <MApp>
     <MMain Class="main-content">
@@ -12,7 +12,7 @@
                      Dark
                      ShrinkOnScroll
                      Prominent
-                     Src="@_configuration["WebSiteImage"]"
+                     Src="@WebSiteOptionsAccessor.Value.BackgroundImageUrl"
                      FadeImgOnScroll
                      ScrollTarget="#main-sheet">
                 <ImgContent>
@@ -22,7 +22,7 @@
                 <ChildContent>
                     <MAppBarNavIcon @onclick="() => _drawer = true"></MAppBarNavIcon>
                     <MAppBarTitle>
-                        @_configuration["WebSiteName"]
+                        @WebSiteOptionsAccessor.Value.Name
                     </MAppBarTitle>
                     <MSpacer></MSpacer>
                 </ChildContent>
