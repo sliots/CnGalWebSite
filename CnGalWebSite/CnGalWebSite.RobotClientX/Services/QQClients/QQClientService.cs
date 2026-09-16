@@ -91,17 +91,17 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
             _unifyBot.MessageReceived.OfType<MessageReceiverBase>().Subscribe(x =>
             {
                 //能接收到所有消息和事件
-                Console.WriteLine(x.ToJsonStr());
+                _logger.LogDebug("{Payload}", x.ToJsonStr());
             });
             _unifyBot.MessageReceived.OfType<MessageReceiver>().Subscribe(x =>
             {
                 //只能接收到消息（所有类型）
-                Console.WriteLine(x.ToJsonStr());
+                _logger.LogDebug("{Payload}", x.ToJsonStr());
             });
             _unifyBot.MessageReceived.OfType<GroupReceiver>().Subscribe(async x =>
             {
                 //只能接收到群消息
-                Console.WriteLine(x.ToJsonStr());
+                _logger.LogDebug("{Payload}", x.ToJsonStr());
                 try
                 {
                     await ReplyFromGroupAsync(x);
@@ -114,7 +114,7 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
             _unifyBot.MessageReceived.OfType<PrivateReceiver>().Subscribe(async x =>
             {
                 //只能接收到好友消息
-                Console.WriteLine(x.ToJsonStr());
+                _logger.LogDebug("{Payload}", x.ToJsonStr());
                 try
                 {
                     await ReplyFromFriendAsync(x);
@@ -127,7 +127,7 @@ namespace CnGalWebSite.RobotClientX.Services.QQClients
             _unifyBot.UnknownMessageReceived.OfType<string>().Subscribe(x =>
             {
                 //未知事件
-                Console.WriteLine(x);
+                _logger.LogDebug("{Payload}", x);
             });
         }
 
