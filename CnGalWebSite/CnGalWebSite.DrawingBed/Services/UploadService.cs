@@ -9,13 +9,17 @@ using System.Security.Policy;
 using Aliyun.OSS;
 using Microsoft.AspNetCore.StaticFiles;
 using Newtonsoft.Json.Linq;
+using CnGalWebSite.DrawingBed.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CnGalWebSite.DrawingBed.Services
 {
     public class UploadService : IUploadService
     {
         private readonly ILogger<UploadService> _logger;
-        private readonly IConfiguration _configuration;
+        private readonly AliyunOssOptions _aliyunOptions;
+        private readonly TencentCosOptions _tencentOptions;
+        private readonly TucangCcOptions _tucangOptions;
         private readonly HttpClient _httpClient;
 
         private string _aliyunBucketName;
@@ -23,10 +27,13 @@ namespace CnGalWebSite.DrawingBed.Services
         private CosXml _tencentCosXml;
         private OssClient _aliyunOssClient;
 
-        public UploadService(ILogger<UploadService> logger, IConfiguration configuration, HttpClient httpClient)
+        public UploadService(ILogger<UploadService> logger, IOptions<AliyunOssOptions> aliyunOptions,
+            IOptions<TencentCosOptions> tencentOptions, IOptions<TucangCcOptions> tucangOptions, HttpClient httpClient)
         {
             _logger = logger;
-            _configuration = configuration;
+            _aliyunOptions = aliyunOptions.Value;
+            _tencentOptions = tencentOptions.Value;
+            _tucangOptions = tucangOptions.Value;
             _httpClient = httpClient;
 
             InitTencentOSS();
@@ -36,14 +43,14 @@ namespace CnGalWebSite.DrawingBed.Services
         private void InitTencentOSS()
         {
             //初始化 CosXmlConfig 
-            string region = _configuration["Tencent_COS_REGION"]; //设置一个默认的存储桶地域
+            string region = _tencentOptions.Region; //设置一个默认的存储桶地域
             CosXmlConfig config = new CosXmlConfig.Builder()
               .IsHttps(true)  //设置默认 HTTPS 请求
               .SetRegion(region)  //设置一个默认的存储桶地域
               .SetDebugLog(true)  //显示日志
               .Build();  //创建 CosXmlConfig 对象
-            string secretId = _configuration["Tencent_SECRET_ID"]; //用户的 SecretId，建议使用子账号密钥，授权遵循最小权限指引，降低使用风险。子账号密钥获取可参见 https://cloud.tencent.com/document/product/598/37140
-            string secretKey = _configuration["Tencent_SECRET_KEY"]; //用户的 SecretKey，建议使用子账号密钥，授权遵循最小权限指引，降低使用风险。子账号密钥获取可参见 https://cloud.tencent.com/document/product/598/37140
+            string secretId = _tencentOptions.SecretId; //用户的 SecretId，建议使用子账号密钥，授权遵循最小权限指引，降低使用风险。子账号密钥获取可参见 https://cloud.tencent.com/document/product/598/37140
+            string secretKey = _tencentOptions.SecretKey; //用户的 SecretKey，建议使用子账号密钥，授权遵循最小权限指引，降低使用风险。子账号密钥获取可参见 https://cloud.tencent.com/document/product/598/37140
             long durationSecond = 600;  //每次请求签名有效时长，单位为秒
             QCloudCredentialProvider cosCredentialProvider = new DefaultQCloudCredentialProvider(
               secretId, secretKey, durationSecond);
@@ -53,12 +60,12 @@ namespace CnGalWebSite.DrawingBed.Services
         private void InitAliyunOSS()
         {
             // yourEndpoint填写Bucket所在地域对应的Endpoint。以华东1（杭州）为例，Endpoint填写为https://oss-cn-hangzhou.aliyuncs.com
-            var endpoint = _configuration["OSSEndpoint"];
+            var endpoint = _aliyunOptions.Endpoint;
             // 阿里云账号AccessKey拥有所有API的访问权限，风险很高。强烈建议您创建并使用RAM用户进行API访问或日常运维，请登录RAM控制台创建RAM用户
-            var accessKeyId = _configuration["OSSAccessKeyId"];
-            var accessKeySecret = _configuration["OSSAccessKeySecret"];
+            var accessKeyId = _aliyunOptions.AccessKeyId;
+            var accessKeySecret = _aliyunOptions.AccessKeySecret;
             // yourBucketName填写Bucket名称
-            _aliyunBucketName = _configuration["OSSBucketName"];
+            _aliyunBucketName = _aliyunOptions.BucketName;
 
             // 创建OSSClient实例
             _aliyunOssClient = new OssClient(endpoint, accessKeyId, accessKeySecret);
@@ -74,7 +81,7 @@ namespace CnGalWebSite.DrawingBed.Services
                 {
                     // 上传文件
                     var result = _aliyunOssClient.PutObject(_aliyunBucketName, objectName, filePath);
-                    var url = _configuration["AudioUrl"] + objectName;
+                    var url = _aliyunOptions.PublicBaseAddress + objectName;
                     _logger.LogInformation("成功上传音频到OSS：{url}", url);
                     return url;
                 }
@@ -94,7 +101,7 @@ namespace CnGalWebSite.DrawingBed.Services
             // 初始化 TransferManager
             TransferManager transferManager = new TransferManager(_tencentCosXml, transferConfig);
 
-            var bucket = _configuration["Tencent_BucketName"]; //存储桶，格式：BucketName-APPID
+            var bucket = _tencentOptions.BucketName; //存储桶，格式：BucketName-APPID
             var cosPath = $"images/upload/{DateTime.UtcNow:yyyyMMdd}/{shar1}.{filePath.Split('.').LastOrDefault() ?? "png"}"; //对象在存储桶中的位置标识符，即称对象键
             var srcPath = filePath;//本地文件绝对路径
 
@@ -107,7 +114,7 @@ namespace CnGalWebSite.DrawingBed.Services
                 COSXMLUploadTask.UploadTaskResult result = await
                 transferManager.UploadAsync(uploadTask);
 
-                var url = _configuration["ImagesUrl"] + cosPath;
+                var url = _tencentOptions.PublicBaseAddress + cosPath;
                 _logger.LogInformation("成功上传图片到OSS：{url}", url);
                 return url;
 
@@ -141,9 +148,9 @@ namespace CnGalWebSite.DrawingBed.Services
                     content: fileContent,
                     name: "file",
                     fileName: uploadName);
-                content.Add(new StringContent(_configuration["TucangCCAPIToken"]), "token");
+                content.Add(new StringContent(_tucangOptions.ApiToken), "token");
 
-                var response = await _httpClient.PostAsync(_configuration["TucangCCAPIUrl"], content);
+                var response = await _httpClient.PostAsync(_tucangOptions.UploadUrl, content);
 
                 var newUploadResults = await response.Content.ReadAsStringAsync();
                 var result = JObject.Parse(newUploadResults);
@@ -151,7 +158,7 @@ namespace CnGalWebSite.DrawingBed.Services
                 if (result["code"].ToObject<int>() == 200)
                 {
 
-                    var url = $"{_configuration["CustomTucangCCUrl"]}{result["data"]["url"].ToObject<string>().Split('/').LastOrDefault()}";
+                    var url = $"{_tucangOptions.PublicBaseAddress}{result["data"]["url"].ToObject<string>().Split('/').LastOrDefault()}";
                     await _httpClient.GetAsync(url);
                     _logger.LogInformation("成功上传图片到TucangCC：{url}", url);
                     return url;
