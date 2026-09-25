@@ -12,13 +12,15 @@ using System.Runtime.InteropServices;
 using System.Security.Policy;
 using System.Text;
 using Tweetinvi.Security;
+using CnGalWebSite.DrawingBed.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace CnGalWebSite.DrawingBed.Services
 {
     public class FileService : IFileService
     {
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly IConfiguration _configuration;
+        private readonly FFmpegOptions _ffmpegOptions;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _imageTempPath = "";
         private readonly string _audioTempPath = "";
@@ -27,11 +29,11 @@ namespace CnGalWebSite.DrawingBed.Services
         private readonly IUploadService _uploadService;
         private readonly IRecordService _recordService;
 
-        public FileService(IHttpClientFactory httpClientFactory, IWebHostEnvironment webHostEnvironment, IConfiguration configuration, ILogger<FileService> logger, IUploadService uploadService, IRecordService recordService)
+        public FileService(IHttpClientFactory httpClientFactory, IWebHostEnvironment webHostEnvironment, IOptions<FFmpegOptions> ffmpegOptions, ILogger<FileService> logger, IUploadService uploadService, IRecordService recordService)
         {
             _httpClientFactory = httpClientFactory;
             _webHostEnvironment = webHostEnvironment;
-            _configuration = configuration;
+            _ffmpegOptions = ffmpegOptions.Value;
             _logger = logger;
             _uploadService = uploadService;
             _recordService = recordService;
@@ -297,7 +299,7 @@ namespace CnGalWebSite.DrawingBed.Services
 
             var ffmpegPath = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                    ? $"/usr/bin/ffmpeg"
-                   : _configuration["FFmpegPath"];
+                   : _ffmpegOptions.Path;
             var ffmpeg = new Engine(ffmpegPath);
 
             var options = new ConversionOptions();

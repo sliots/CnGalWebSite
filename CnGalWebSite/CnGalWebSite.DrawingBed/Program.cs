@@ -9,21 +9,28 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Filters;
 using System.Reflection;
+using CnGalWebSite.DrawingBed.Configuration;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDrawingBedConfiguration();
 
 // Add services to the container.
 
 //添加数据库连接池
-builder.Services.AddDbContextPool<AppDbContext>(options =>
-   options.UseMySql(builder.Configuration["DefaultDBConnection"], ServerVersion.AutoDetect(builder.Configuration["DefaultDBConnection"]),
+builder.Services.AddDbContextPool<AppDbContext>((provider, options) =>
+{
+    var connection = provider.GetRequiredService<IOptions<DatabaseOptions>>().Value.Default;
+    options.UseMySql(connection, ServerVersion.AutoDetect(connection),
         o =>
         {
             //全局配置查询拆分模式
             o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             // 在查询中使用表达式包装集合
             o.TranslateParameterizedCollectionsToConstants();
-        }));
+        });
+});
 
 builder.Services.AddControllers();
 //注册Swagger生成器，定义一个或多个Swagger文件
@@ -68,13 +75,15 @@ builder.Services.AddTransient(typeof(IRepository<,>), typeof(RepositoryBase<,>))
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
-        options.Authority = builder.Configuration["Authority"];
         options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateAudience = false
         };
     });
+builder.Services.AddOptions<JwtBearerOptions>("Bearer")
+    .Configure<IOptions<JwtAuthorityOptions>>((options, authority) =>
+        options.Authority = authority.Value.Authority);
 
 //添加授权范围
 builder.Services.AddAuthorization(options =>

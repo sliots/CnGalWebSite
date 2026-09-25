@@ -5,7 +5,6 @@ using CnGalWebSite.RobotClientX.Models.GPT;
 using CnGalWebSite.RobotClientX.Models.Messages;
 using CnGalWebSite.RobotClientX.Services.Messages;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 
 namespace CnGalWebSite.RobotClientX.Services.GPT
 {
@@ -57,8 +56,12 @@ namespace CnGalWebSite.RobotClientX.Services.GPT
                 }).ToList()
             };
 
-            // 打印请求信息
-            _logger.LogInformation("向看板娘发送请求：{model}", JsonSerializer.Serialize(model, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+            var latestMessage = model.Messages[^1].Text ?? string.Empty;
+            if (latestMessage.Length > 200)
+            {
+                latestMessage = $"{latestMessage[..197]}...";
+            }
+            _logger.LogInformation("向看板娘发送请求：群 {GroupId}，历史 {MessageCount} 条，最新消息：{LatestMessage}", sendTo, model.Messages.Count, latestMessage);
 
             var result = await _eventBusService.CallKanbanGroupChatGPT(model);
             if (result == null || result.Success == false)

@@ -16,6 +16,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json.Nodes;
+using System.Globalization;
 
 namespace CnGalWebSite.APIServer.Controllers
 {
@@ -66,6 +68,23 @@ namespace CnGalWebSite.APIServer.Controllers
         public async Task<string> GetSteamAppDetails(int steamId)
         {
             var content = await (await _httpService.GetClientAsync()).GetStringAsync($"https://store.steampowered.com/api/appdetails?appids={steamId}&l=schinese");
+            var requestedId = steamId.ToString(CultureInfo.InvariantCulture);
+            if (JsonNode.Parse(content) is JsonObject root && !root.ContainsKey(requestedId))
+            {
+                // Steam may return the requested app under a DLC key; verify its identity before remapping.
+                var matchingApps = root.Where(item =>
+                    item.Value is JsonObject app &&
+                    app["data"] is JsonObject data &&
+                    data["steam_appid"] is JsonValue id &&
+                    id.TryGetValue<int>(out var appId) && appId == steamId).ToList();
+                if (matchingApps.Count == 1)
+                {
+                    var match = matchingApps[0];
+                    root.Remove(match.Key);
+                    root[requestedId] = match.Value;
+                    return root.ToJsonString();
+                }
+            }
             return content;
         }
 

@@ -23,17 +23,20 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
 
       # 后端API
-      MainSiteApi__BaseAddress: ${WebApiPath:-https://api.cngal.org/}
+      MainSiteApi__BaseAddress: ${MainSiteApi__BaseAddress:-https://api.cngal.org/}
       # 图床API
       ImageApi__BaseAddress: ${ImageApi__BaseAddress:-https://api.cngal.top/}
       # 定时任务API
-      MainSiteApi__TaskApiPath: ${TaskApiPath}
+      MainSiteApi__TaskApiPath: ${MainSiteApi__TaskApiPath:-}
 
-      # OIDC 鉴权
-      Oidc__Authority: ${Authority:-https://oauth2.cngal.org}
-      Oidc__ClientId: ${ClientId}
-      Oidc__ClientSecret: ${ClientSecret}
-      Oidc__RequireHttpsMetadata: ${RequireHttpsMetadata:-true}
+      # OIDC 鉴权地址
+      Oidc__Authority: ${Oidc__Authority:-https://oauth2.cngal.org}
+      # OIDC 客户端 ID
+      Oidc__ClientId: ${Oidc__ClientId:-}
+      # OIDC 客户端密钥
+      Oidc__ClientSecret: ${Oidc__ClientSecret:-}
+      # OIDC 是否要求 HTTPS 元数据
+      Oidc__RequireHttpsMetadata: ${Oidc__RequireHttpsMetadata:-true}
 
     labels:
       com.centurylinklabs.watchtower.enable: ${WATCHTOWER_ENABLE:-true}

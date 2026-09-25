@@ -21,33 +21,41 @@ services:
     environment:
       TZ: ${TZ:-Asia/Shanghai}
 
-      # Ids 地址
-      Authority: ${Authority:-https://oauth2.cngal.org}
+      # JWT 鉴权地址
+      JwtBearer__Authority: ${JwtBearer__Authority:-https://oauth2.cngal.org}
 
-      # 阿里云OSS相关
-      OSSEndpoint: ${OSSEndpoint}
-      OSSBucketName: ${OSSBucketName}
-      OSSAccessKeyId: ${OSSAccessKeyId}
-      OSSAccessKeySecret: ${OSSAccessKeySecret}
+      # 阿里云 OSS 服务地址（必填）
+      AliyunOss__Endpoint: ${AliyunOss__Endpoint:?AliyunOss__Endpoint is required}
+      # 阿里云 OSS 存储桶名称（必填）
+      AliyunOss__BucketName: ${AliyunOss__BucketName:?AliyunOss__BucketName is required}
+      # 阿里云 OSS 访问密钥 ID
+      AliyunOss__AccessKeyId: ${AliyunOss__AccessKeyId:-}
+      # 阿里云 OSS 访问密钥
+      AliyunOss__AccessKeySecret: ${AliyunOss__AccessKeySecret:-}
 
       # 数据库连接字符串
-      DefaultDBConnection: ${DefaultDBConnection}
+      ConnectionStrings__Default: ${ConnectionStrings__Default:-}
 
-      # 腾讯云COS
-      Tencent_COS_REGION: ${Tencent_COS_REGION}
-      Tencent_SECRET_ID: ${Tencent_SECRET_ID}
-      Tencent_SECRET_KEY: ${Tencent_SECRET_KEY}
-      Tencent_BucketName: ${Tencent_BucketName}
+      # 腾讯云 COS 地域
+      TencentCos__Region: ${TencentCos__Region:-}
+      # 腾讯云 COS 访问密钥 ID
+      TencentCos__SecretId: ${TencentCos__SecretId:-}
+      # 腾讯云 COS 访问密钥
+      TencentCos__SecretKey: ${TencentCos__SecretKey:-}
+      # 腾讯云 COS 存储桶名称（必填）
+      TencentCos__BucketName: ${TencentCos__BucketName:?TencentCos__BucketName is required}
 
-      # 图仓
-      TucangCCAPIToken: ${TucangCCAPIToken}
-      TucangCCAPIUrl: ${TucangCCAPIUrl:-https://tucang.cc/api/v1/upload}
-      CustomTucangCCUrl: ${CustomTucangCCUrl:-https://tucang.cngal.top/api/image/show/}
+      # 图仓 API 令牌
+      TucangCc__ApiToken: ${TucangCc__ApiToken:-}
+      # 图仓上传接口地址
+      TucangCc__UploadUrl: ${TucangCc__UploadUrl:-https://tucang.cc/api/v1/upload}
+      # 图仓公开访问地址前缀
+      TucangCc__PublicBaseAddress: ${TucangCc__PublicBaseAddress:-https://tucang.cngal.top/api/image/show/}
 
-      # 音频 baseUrl
-      AudioUrl: ${AudioUrl:-https://res.cngal.org/}
-      # 图片 baseUrl
-      ImagesUrl: ${ImagesUrl:-https://image.cngal.org/}
+      # 阿里云 OSS 音频公开访问地址前缀
+      AliyunOss__PublicBaseAddress: ${AliyunOss__PublicBaseAddress:-https://res.cngal.org/}
+      # 腾讯云 COS 图片公开访问地址前缀
+      TencentCos__PublicBaseAddress: ${TencentCos__PublicBaseAddress:-https://image.cngal.org/}
 
     labels:
       com.centurylinklabs.watchtower.enable: ${WATCHTOWER_ENABLE:-true}

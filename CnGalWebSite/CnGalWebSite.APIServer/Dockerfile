@@ -34,4 +34,8 @@ RUN dotnet publish "CnGalWebSite.APIServer.csproj" -c $BUILD_CONFIGURATION --no-
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+USER root
+RUN mkdir -p /app/wwwroot \
+    && chown -R $APP_UID:root /app/wwwroot
+USER $APP_UID
 ENTRYPOINT ["dotnet", "CnGalWebSite.APIServer.dll"]
